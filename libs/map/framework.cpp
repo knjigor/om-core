@@ -2933,11 +2933,22 @@ bool Framework::IsWellFormedBackgroundTilesURL(std::string const & url)
 void Framework::ApplyMapLanguageCode(std::string const & langCode)
 {
   int8_t langIndex = StringUtf8Multilang::GetLangIndex(langCode);
-  ASSERT(langIndex != StringUtf8Multilang::kUnsupportedLanguageCode, ());
-  if (langIndex == StringUtf8Multilang::kUnsupportedLanguageCode)
-    langIndex = StringUtf8Multilang::kDefaultCode;
 
-  m_drapeEngine->SetMapLangIndex(langIndex);
+  // --- NOVO: Ako ne prepozna "sr-Latn" ili "en-US", uzimamo samo prva dva slova "sr", "en" ---
+  if (langIndex == StringUtf8Multilang::kUnsupportedLanguageCode && langCode.length() >= 2)
+  {
+    std::string shortCode = langCode.substr(0, 2);
+    langIndex = StringUtf8Multilang::GetLangIndex(shortCode);
+  }
+
+  if (langIndex == StringUtf8Multilang::kUnsupportedLanguageCode)
+  {
+    LOG(LWARNING, ("Unsupported map language code:", langCode, "falling back to default."));
+    langIndex = StringUtf8Multilang::kDefaultCode;
+  }
+
+  if (m_drapeEngine != nullptr)
+    m_drapeEngine->SetMapLangIndex(langIndex);
 }
 
 void Framework::Allow3dMode(bool allow3d, bool allow3dBuildings)
