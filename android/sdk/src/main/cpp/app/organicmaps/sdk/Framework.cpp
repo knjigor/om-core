@@ -30,6 +30,8 @@
 #include "coding/files_container.hpp"
 #include "coding/string_utf8_multilang.hpp"
 
+#include "routing/maxspeeds.hpp"
+
 #include "geometry/angles.hpp"
 #include "geometry/distance_on_sphere.hpp"
 #include "geometry/mercator.hpp"
@@ -1962,18 +1964,49 @@ JNIEXPORT jobjectArray Java_app_organicmaps_sdk_Framework_nativeGetRoadInfo(JNIE
       else
         streetName = "";
 
-      // --- NOVO: Određivanje brzine na osnovu tipa puta (Fallback logika) ---
-      for (auto const t : types)
-      {
-        std::string const typeStr = classif().GetReadableObjectName(t);
+      // --- PRAVO ČITANJE ZNAKOVA IZ RUTING GRAFA ---
+      maxSpeed = "";
+      FeatureID const & fid = ft.GetID();
+      auto const handle = frm()->GetDataSource().GetMwmHandleById(fid.m_mwmId);
 
-        if (typeStr.find("highway-motorway") != std::string::npos) { maxSpeed = "130"; break; }
-        else if (typeStr.find("highway-trunk") != std::string::npos) { maxSpeed = "100"; break; }
-        else if (typeStr.find("highway-primary") != std::string::npos) { maxSpeed = "80"; break; }
-        else if (typeStr.find("highway-secondary") != std::string::npos) { maxSpeed = "80"; break; }
-        else if (typeStr.find("highway-residential") != std::string::npos) { maxSpeed = "50"; break; }
-        else if (typeStr.find("highway-living_street") != std::string::npos) { maxSpeed = "30"; break; }
-        else if (typeStr.find("highway-city") != std::string::npos) { maxSpeed = "50"; break; }
+      if (handle.IsAlive())
+      {
+        try
+        {
+          auto maxspeeds = routing::LoadMaxspeeds(handle);
+          if (maxspeeds)
+          {
+            routing::Maxspeed const maxspeed = maxspeeds->GetMaxspeed(fid.m_index);
+            if (maxspeed.IsValid())
+            {
+              auto const speed = maxspeed.GetForwardKmPH();
+              if (speed > 0 && speed < 300)
+              {
+                maxSpeed = std::to_string(speed);
+              }
+            }
+          }
+        }
+        catch (...)
+        {
+        }
+      }
+
+      // --- FALLBACK LOGIKA (Ako znak ne postoji u bazi za ovaj put) ---
+      if (maxSpeed.empty())
+      {
+        for (auto const t : types)
+        {
+          std::string const typeStr = classif().GetReadableObjectName(t);
+
+          if (typeStr.find("highway-motorway") != std::string::npos) { maxSpeed = "130"; break; }
+          else if (typeStr.find("highway-trunk") != std::string::npos) { maxSpeed = "100"; break; }
+          else if (typeStr.find("highway-primary") != std::string::npos) { maxSpeed = "80"; break; }
+          else if (typeStr.find("highway-secondary") != std::string::npos) { maxSpeed = "80"; break; }
+          else if (typeStr.find("highway-residential") != std::string::npos) { maxSpeed = "50"; break; }
+          else if (typeStr.find("highway-living_street") != std::string::npos) { maxSpeed = "30"; break; }
+          else if (typeStr.find("highway-city") != std::string::npos) { maxSpeed = "50"; break; }
+        }
       }
     }
   }, rect, scales::GetUpperScale());
