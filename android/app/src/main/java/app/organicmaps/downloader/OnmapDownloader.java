@@ -1,7 +1,6 @@
 package app.organicmaps.downloader;
 
 import android.content.Context;
-import android.location.Location;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -153,17 +152,11 @@ public class OnmapDownloader
             sizeText = StringUtils.getFileSizeString(mContext, mCurrentCountry.totalSize);
 
             if (shouldAutoDownload && Config.isAutodownloadEnabled() && !sAutodownloadLocked && !failed
-                && ConnectionState.INSTANCE.isWifiConnected())
+                && ConnectionState.INSTANCE.isConnected())
             {
-              Location loc = MwmApplication.from(mContext).getLocationHelper().getSavedLocation();
-              if (loc != null)
+              if (MapManager.nativeHasSpaceToDownloadCountry(mCurrentCountry.id))
               {
-                String country = MapManager.nativeFindCountry(loc.getLatitude(), loc.getLongitude());
-                if (TextUtils.equals(mCurrentCountry.id, country)
-                    && MapManager.nativeHasSpaceToDownloadCountry(country))
-                {
-                  MapManagerHelper.startDownload(mContext, mCurrentCountry.id);
-                }
+                MapManagerHelper.startDownload(mContext, mCurrentCountry.id);
               }
             }
 

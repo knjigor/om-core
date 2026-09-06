@@ -18,7 +18,7 @@ import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
-import app.organicmaps.background.OsmUploadWork;
+
 import app.organicmaps.downloader.DownloaderNotifier;
 import app.organicmaps.location.TrackRecordingService;
 import app.organicmaps.routing.NavigationService;
@@ -216,7 +216,7 @@ public class MwmApplication extends Application implements Application.ActivityL
   {
     Logger.d(TAG);
 
-    OsmUploadWork.startActionUploadOsmChanges(this);
+    // OsmUploadWork.startActionUploadOsmChanges(this);
 
     if (!mDisplayManager.isDeviceDisplayUsed())
       Logger.i(LOCATION_TAG, "Android Auto is active, keeping location in the background");

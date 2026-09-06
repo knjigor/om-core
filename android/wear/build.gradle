@@ -2,8 +2,8 @@ plugins {
     id 'com.android.application'
 }
 
-apply from: "${rootProject.rootDir}/groovy/common-config.gradle"
-apply from: "${rootProject.rootDir}/groovy/application-signing.gradle"
+apply from: "${rootProject.rootDir}/organicmaps/android/groovy/common-config.gradle"
+apply from: "${rootProject.rootDir}/organicmaps/android/groovy/application-signing.gradle"
 
 android {
     namespace 'app.organicmaps.wear'

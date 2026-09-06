@@ -425,11 +425,7 @@
       android:name="app.organicmaps.DownloadResourcesActivity"
       android:label="@string/app_name"
       android:targetActivity="app.organicmaps.SplashActivity"
-      android:exported="true">
-      <intent-filter>
-        <action android:name="android.intent.action.MAIN"/>
-        <category android:name="android.intent.category.LAUNCHER"/>
-      </intent-filter>
+      android:exported="false">
     </activity-alias>
 
     <activity

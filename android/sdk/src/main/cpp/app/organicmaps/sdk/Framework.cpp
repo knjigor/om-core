@@ -28,11 +28,15 @@
 #include "drape/support_manager.hpp"
 
 #include "coding/files_container.hpp"
+#include "coding/string_utf8_multilang.hpp"
 
 #include "geometry/angles.hpp"
 #include "geometry/distance_on_sphere.hpp"
 #include "geometry/mercator.hpp"
 #include "geometry/point_with_altitude.hpp"
+
+#include "indexer/feature_algo.hpp"
+#include "indexer/classificator.hpp"
 
 #include "indexer/feature_altitude.hpp"
 #include "indexer/validate_and_format_contacts.hpp"
@@ -1908,6 +1912,71 @@ JNIEXPORT void Java_app_organicmaps_sdk_Framework_nativeDidShowDonationPage(JNIE
 JNIEXPORT void Java_app_organicmaps_sdk_Framework_nativeResetDonations(JNIEnv *, jclass)
 {
   frm()->ResetDonations();
+}
+
+JNIEXPORT jobjectArray Java_app_organicmaps_sdk_Framework_nativeGetRoadInfo(JNIEnv * env, jclass, jdouble lat, jdouble lon)
+{
+  if (!g_framework)
+    return nullptr;
+
+  m2::PointD const pt = mercator::FromLatLon(lat, lon);
+  // Smanjujemo radijus pretrage na 20 metara radi bržeg izvršavanja
+  m2::RectD const rect = mercator::RectByCenterXYAndSizeInMeters(pt, 20.0);
+
+  std::string streetName = "";
+  std::string maxSpeed = "";
+  double minDistance = std::numeric_limits<double>::max();
+
+  auto const & dataSource = frm()->GetDataSource();
+
+  dataSource.ForEachInRect([&](FeatureType & ft)
+  {
+    if (ft.GetGeomType() != feature::GeomType::Line)
+      return;
+
+    feature::TypesHolder types(ft);
+    bool isRoad = false;
+    for (auto const t : types)
+    {
+      std::string const typeStr = classif().GetReadableObjectName(t);
+      if (typeStr.find("highway") != std::string::npos)
+      {
+        isRoad = true;
+        break;
+      }
+    }
+
+    if (!isRoad)
+      return;
+
+    ft.ParseGeometry(FeatureType::BEST_GEOMETRY);
+    double const dist = feature::GetMinDistanceMeters(ft, pt);
+
+    if (dist < minDistance)
+    {
+      minDistance = dist;
+
+      std::string_view const nameView = ft.GetName(StringUtf8Multilang::kDefaultCode);
+      if (!nameView.empty())
+        streetName = std::string(nameView);
+      else
+        streetName = "";
+
+      maxSpeed = "";
+    }
+  }, rect, scales::GetUpperScale());
+
+  // --- LOGIKA ZA OFFROAD ---
+  // Ako u radijusu od 10 metara nema nijednog puta, tretiramo kao off-road
+  if (minDistance > 10.0)
+  {
+    streetName = "OFFROAD";
+  }
+
+  jobjectArray result = env->NewObjectArray(2, jni::GetStringClass(env), nullptr);
+  env->SetObjectArrayElement(result, 0, jni::ToJavaString(env, streetName));
+  env->SetObjectArrayElement(result, 1, jni::ToJavaString(env, maxSpeed));
+  return result;
 }
 }  // extern "C"
 
