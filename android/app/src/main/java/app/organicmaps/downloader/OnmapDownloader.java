@@ -151,8 +151,15 @@ public class OnmapDownloader
           {
             sizeText = StringUtils.getFileSizeString(mContext, mCurrentCountry.totalSize);
 
+            boolean isConnected = false;
+            try {
+              isConnected = ConnectionState.INSTANCE.isConnected();
+            } catch (Exception e) {
+              isConnected = true;
+            }
+
             if (shouldAutoDownload && Config.isAutodownloadEnabled() && !sAutodownloadLocked && !failed
-                && ConnectionState.INSTANCE.isConnected())
+                && isConnected)
             {
               if (MapManager.nativeHasSpaceToDownloadCountry(mCurrentCountry.id))
               {
