@@ -31,6 +31,8 @@
 #include "coding/string_utf8_multilang.hpp"
 
 #include "routing/maxspeeds.hpp"
+#include "defines.hpp"
+#include <mutex>
 
 #include "geometry/angles.hpp"
 #include "geometry/distance_on_sphere.hpp"
@@ -1916,6 +1918,11 @@ JNIEXPORT void Java_app_organicmaps_sdk_Framework_nativeResetDonations(JNIEnv *,
   frm()->ResetDonations();
 }
 
+// --- GLOBALNI KEŠ ZA OGRANIČENJA BRZINE ---
+static std::shared_ptr<routing::Maxspeeds> g_cachedMaxspeeds;
+static MwmSet::MwmId g_cachedMwmId;
+static std::mutex g_maxspeedsMutex;
+
 JNIEXPORT jobjectArray Java_app_organicmaps_sdk_Framework_nativeGetRoadInfo(JNIEnv * env, jclass, jdouble lat, jdouble lon)
 {
   if (!g_framework)
@@ -1964,31 +1971,44 @@ JNIEXPORT jobjectArray Java_app_organicmaps_sdk_Framework_nativeGetRoadInfo(JNIE
       else
         streetName = "";
 
-      // --- PRAVO ČITANJE ZNAKOVA IZ RUTING GRAFA ---
+      // --- PRAVO ČITANJE ZNAKOVA IZ RUTING GRAFA (SA THREAD-SAFE KEŠOM) ---
       maxSpeed = "";
       FeatureID const & fid = ft.GetID();
-      auto const handle = frm()->GetDataSource().GetMwmHandleById(fid.m_mwmId);
 
-      if (handle.IsAlive())
+      std::shared_ptr<routing::Maxspeeds> localMaxspeeds;
       {
-        try
+        std::lock_guard<std::mutex> lock(g_maxspeedsMutex);
+
+        if (g_cachedMwmId != fid.m_mwmId)
         {
-          auto maxspeeds = routing::LoadMaxspeeds(handle);
-          if (maxspeeds)
+          g_cachedMwmId = fid.m_mwmId;
+          g_cachedMaxspeeds.reset();
+
+          auto const handle = dataSource.GetMwmHandleById(fid.m_mwmId);
+          if (handle.IsAlive())
           {
-            routing::Maxspeed const maxspeed = maxspeeds->GetMaxspeed(fid.m_index);
-            if (maxspeed.IsValid())
+            try
             {
-              auto const speed = maxspeed.GetForwardKmPH();
-              if (speed > 0 && speed < 300)
-              {
-                maxSpeed = std::to_string(speed);
-              }
+              g_cachedMaxspeeds = routing::LoadMaxspeeds(handle);
+            }
+            catch (...)
+            {
             }
           }
         }
-        catch (...)
+        localMaxspeeds = g_cachedMaxspeeds;
+      }
+
+      if (localMaxspeeds)
+      {
+        routing::Maxspeed const maxspeed = localMaxspeeds->GetMaxspeed(fid.m_index);
+        if (maxspeed.IsValid())
         {
+          auto const speedVal = maxspeed.GetForwardKmPH();
+          if (speedVal > 0 && speedVal < 300)
+          {
+            maxSpeed = std::to_string(speedVal);
+          }
         }
       }
 
@@ -2011,8 +2031,6 @@ JNIEXPORT jobjectArray Java_app_organicmaps_sdk_Framework_nativeGetRoadInfo(JNIE
     }
   }, rect, scales::GetUpperScale());
 
-  // --- LOGIKA ZA OFFROAD ---
-  // Ako u radijusu od 10 metara nema nijednog puta, tretiramo kao off-road
   if (minDistance > 10.0)
   {
     streetName = "OFFROAD";
