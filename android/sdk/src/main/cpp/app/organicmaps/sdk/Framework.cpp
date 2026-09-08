@@ -1929,12 +1929,15 @@ JNIEXPORT jobjectArray Java_app_organicmaps_sdk_Framework_nativeGetRoadInfo(JNIE
     return nullptr;
 
   m2::PointD const pt = mercator::FromLatLon(lat, lon);
-  // Smanjujemo radijus pretrage na 20 metara radi bržeg izvršavanja
-  m2::RectD const rect = mercator::RectByCenterXYAndSizeInMeters(pt, 20.0);
+  // Povećavamo radijus pretrage na 35 metara radi bolje pokrivenosti pri vožnji
+  m2::RectD const rect = mercator::RectByCenterXYAndSizeInMeters(pt, 35.0);
 
   std::string streetName = "";
   std::string maxSpeed = "";
+  std::string snappedLatStr = "0.0";
+  std::string snappedLonStr = "0.0";
   double minDistance = std::numeric_limits<double>::max();
+  m2::PointD bestSnappedPoint = pt;
 
   auto const & dataSource = frm()->GetDataSource();
 
@@ -1959,11 +1962,29 @@ JNIEXPORT jobjectArray Java_app_organicmaps_sdk_Framework_nativeGetRoadInfo(JNIE
       return;
 
     ft.ParseGeometry(FeatureType::BEST_GEOMETRY);
-    double const dist = feature::GetMinDistanceMeters(ft, pt);
+    size_t const count = ft.GetPointsCount();
+    if (count < 2)
+      return;
 
-    if (dist < minDistance)
+    m2::PointD closestPt = pt;
+    double minDistForFeature = std::numeric_limits<double>::max();
+
+    for (size_t i = 1; i < count; ++i)
     {
-      minDistance = dist;
+      m2::ParametrizedSegment<m2::PointD> const segment(ft.GetPoint(i - 1), ft.GetPoint(i));
+      m2::PointD const p = segment.ClosestPointTo(pt);
+      double const d = mercator::DistanceOnEarth(p, pt);
+      if (d < minDistForFeature)
+      {
+        minDistForFeature = d;
+        closestPt = p;
+      }
+    }
+
+    if (minDistForFeature < minDistance)
+    {
+      minDistance = minDistForFeature;
+      bestSnappedPoint = closestPt;
 
       std::string_view const nameView = ft.GetName(StringUtf8Multilang::kDefaultCode);
       if (!nameView.empty())
@@ -2023,22 +2044,33 @@ JNIEXPORT jobjectArray Java_app_organicmaps_sdk_Framework_nativeGetRoadInfo(JNIE
           else if (typeStr.find("highway-trunk") != std::string::npos) { maxSpeed = "100"; break; }
           else if (typeStr.find("highway-primary") != std::string::npos) { maxSpeed = "80"; break; }
           else if (typeStr.find("highway-secondary") != std::string::npos) { maxSpeed = "80"; break; }
+          else if (typeStr.find("highway-tertiary") != std::string::npos) { maxSpeed = "50"; break; }
+          else if (typeStr.find("highway-unclassified") != std::string::npos) { maxSpeed = "50"; break; }
           else if (typeStr.find("highway-residential") != std::string::npos) { maxSpeed = "50"; break; }
           else if (typeStr.find("highway-living_street") != std::string::npos) { maxSpeed = "30"; break; }
+          else if (typeStr.find("highway-service") != std::string::npos) { maxSpeed = "30"; break; }
           else if (typeStr.find("highway-city") != std::string::npos) { maxSpeed = "50"; break; }
         }
       }
     }
   }, rect, scales::GetUpperScale());
 
-  if (minDistance > 10.0)
+  if (minDistance > 35.0)
   {
     streetName = "OFFROAD";
   }
+  else
+  {
+    ms::LatLon const snappedLatLon = mercator::ToLatLon(bestSnappedPoint);
+    snappedLatStr = std::to_string(snappedLatLon.m_lat);
+    snappedLonStr = std::to_string(snappedLatLon.m_lon);
+  }
 
-  jobjectArray result = env->NewObjectArray(2, jni::GetStringClass(env), nullptr);
+  jobjectArray result = env->NewObjectArray(4, jni::GetStringClass(env), nullptr);
   env->SetObjectArrayElement(result, 0, jni::ToJavaString(env, streetName));
   env->SetObjectArrayElement(result, 1, jni::ToJavaString(env, maxSpeed));
+  env->SetObjectArrayElement(result, 2, jni::ToJavaString(env, snappedLatStr));
+  env->SetObjectArrayElement(result, 3, jni::ToJavaString(env, snappedLonStr));
   return result;
 }
 }  // extern "C"

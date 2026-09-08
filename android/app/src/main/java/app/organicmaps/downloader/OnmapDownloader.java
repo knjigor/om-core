@@ -1,5 +1,6 @@
 package app.organicmaps.downloader;
 
+import android.app.Activity;
 import android.content.Context;
 import android.text.TextUtils;
 import android.view.View;
@@ -178,7 +179,7 @@ public class OnmapDownloader
     UiUtils.showIf(showFrame, mFrame);
   }
 
-  public OnmapDownloader(MwmActivity activity, View onMapDownloader)
+  public OnmapDownloader(Activity activity, View onMapDownloader)
   {
     mContext = activity;
     mFrame = onMapDownloader;
@@ -210,7 +211,8 @@ public class OnmapDownloader
           else
           {
             MapManagerHelper.startDownload(mContext, mCurrentCountry.id);
-            activity.requestPostNotificationsPermission();
+            if (activity instanceof MwmActivity)
+              ((MwmActivity) activity).requestPostNotificationsPermission();
           }
         }));
 
