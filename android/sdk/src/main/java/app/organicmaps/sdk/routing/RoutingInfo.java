@@ -87,7 +87,6 @@ public final class RoutingInfo
 
   public boolean hasNextNextTurn()
   {
-    return nextNextStreet != null && !nextNextStreet.isEmpty() && nextCarDirection != CarDirection.NoTurn
- && nextCarDirection != CarDirection.GoStraight;
+    return nextCarDirection != CarDirection.NoTurn && nextCarDirection != CarDirection.GoStraight;
   }
 }
