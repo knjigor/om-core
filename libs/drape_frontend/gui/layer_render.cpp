@@ -50,7 +50,7 @@ void LayerRenderer::Render(ref_ptr<dp::GraphicsContext> context, ref_ptr<gpu::Pr
 
   for (auto & r : m_renderers)
   {
-    if (routingActive && (r.first == gui::WIDGET_COMPASS || r.first == gui::WIDGET_RULER))
+    if (r.first == gui::WIDGET_COMPASS || (routingActive && r.first == gui::WIDGET_RULER))
       continue;
 
     r.second->Render(context, mng, screen);
@@ -328,11 +328,11 @@ drape_ptr<LayerRenderer> LayerCacher::RecacheDebugLabels(ref_ptr<dp::GraphicsCon
 void LayerCacher::CacheCompass(ref_ptr<dp::GraphicsContext> context, Position const & position,
                                ref_ptr<LayerRenderer> renderer, ref_ptr<dp::TextureManager> textures)
 {
-  Compass compass = Compass(position);
-  drape_ptr<ShapeRenderer> shape =
-      compass.Draw(context, textures, std::bind(&DrapeGui::CallOnCompassTappedHandler, &DrapeGui::Instance()));
-
-  renderer->AddShapeRenderer(WIDGET_COMPASS, std::move(shape));
+  (void)context;
+  (void)position;
+  (void)renderer;
+  (void)textures;
+  // Native compass widget disabled for RoadDash app
 }
 
 void LayerCacher::CacheRuler(ref_ptr<dp::GraphicsContext> context, Position const & position,
