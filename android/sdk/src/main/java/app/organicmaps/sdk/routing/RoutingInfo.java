@@ -46,6 +46,7 @@ public final class RoutingInfo
   public final double speedLimitMps;
   private final boolean speedCamLimitExceeded;
   private final boolean shouldPlayWarningSignal;
+  public final boolean isInTunnel;
 
   private RoutingInfo(Distance distToTarget, Distance distToTurn, Distance distToNextTurn, String currentStreet, String nextStreet,
                       @Nullable RoadShieldInfo nextStreetRoadShields, String nextNextStreet,
@@ -53,7 +54,7 @@ public final class RoutingInfo
                       @NonNull CarDirection carTurnDirection, @NonNull CarDirection carNextTurnDirection,
                       @NonNull PedestrianDirection pedestrianDirection, int exitNum, int totalTime,
                       @Nullable LaneInfo[] lanes, double speedLimitMps, boolean speedLimitExceeded,
-                      boolean shouldPlayWarningSignal)
+                      boolean shouldPlayWarningSignal, boolean isInTunnel)
   {
     this.distToTarget = distToTarget;
     this.distToTurn = distToTurn;
@@ -73,6 +74,7 @@ public final class RoutingInfo
     this.speedLimitMps = speedLimitMps;
     this.speedCamLimitExceeded = speedLimitExceeded;
     this.shouldPlayWarningSignal = shouldPlayWarningSignal;
+    this.isInTunnel = isInTunnel;
   }
 
   public boolean isSpeedCamLimitExceeded()

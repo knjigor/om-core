@@ -3,6 +3,9 @@
 
 #include "traffic/speed_groups.hpp"
 
+#include "indexer/ftypes_matcher.hpp"
+#include "indexer/data_source.hpp"
+
 #include "geometry/mercator.hpp"
 
 #include "platform/location.hpp"
@@ -436,6 +439,18 @@ SpeedInUnits Route::GetCurrentSpeedLimit() const
 void Route::GetCurrentStreetName(RouteSegment::RoadNameInfo & roadNameInfo) const
 {
   GetClosestStreetNameAfterIdx(m_poly.GetCurrentIter().m_ind, roadNameInfo);
+}
+
+bool Route::IsInTunnel() const
+{
+  if (!IsValid())
+    return false;
+
+  size_t const curIdx = m_poly.GetCurrentIter().m_ind;
+  if (curIdx >= m_routeSegments.size())
+    return false;
+
+  return m_routeSegments[curIdx].GetRoadNameInfo().m_isTunnel;
 }
 
 void Route::GetNextTurnStreetName(RouteSegment::RoadNameInfo & roadNameInfo) const

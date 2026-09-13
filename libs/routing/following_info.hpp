@@ -83,5 +83,8 @@ public:
   // Current speed limit in meters per second.
   // If no info about speed limit then m_speedLimitMps < 0.
   double m_speedLimitMps = -1.0;
+
+  // Whether current position on route is inside a tunnel feature
+  bool m_isInTunnel = false;
 };
 }  // namespace routing

@@ -100,6 +100,7 @@ public:
     std::string m_destination;   // E.g. "Cupertino".
     std::string m_ref;           // Number of street/road e.g. "CA 85".
     bool m_isLink = false;
+    bool m_isTunnel = false;
 
     RoadNameInfo() = default;
     RoadNameInfo(std::string name) : m_name(std::move(name)) {}
@@ -500,6 +501,9 @@ public:
 
   /// \brief Returns name info of a street where the user rides at this moment.
   void GetCurrentStreetName(RouteSegment::RoadNameInfo & roadNameInfo) const;
+
+  /// \brief Checks if the current route segment is classified as a tunnel in map data.
+  bool IsInTunnel() const;
 
   /// \brief Returns current speed limit
   SpeedInUnits GetCurrentSpeedLimit() const;

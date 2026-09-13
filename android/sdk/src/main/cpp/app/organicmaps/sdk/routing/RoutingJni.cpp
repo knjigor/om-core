@@ -264,7 +264,8 @@ jobject CreateRoutingInfo(JNIEnv * env, routing::FollowingInfo const & info, Rou
     CreateLanesInfo(env, info.m_lanes),
     info.m_speedLimitMps,
     static_cast<jboolean>(rm.IsSpeedCamLimitExceeded()),
-    static_cast<jboolean>(rm.GetSpeedCamManager().ShouldPlayBeepSignal())
+    static_cast<jboolean>(rm.GetSpeedCamManager().ShouldPlayBeepSignal()),
+    static_cast<jboolean>(info.m_isInTunnel)
   );
   // clang-format on
   ASSERT(result, (DescribeException()));

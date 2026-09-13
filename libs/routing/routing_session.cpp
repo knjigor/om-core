@@ -425,6 +425,8 @@ void RoutingSession::GetRouteFollowingInfo(FollowingInfo & info) const
   else
     info.m_speedLimitMps = -1.0;
 
+  info.m_isInTunnel = m_route->IsInTunnel();
+
   // The turn after the next one.
   if (m_routingSettings.m_showTurnAfterNext)
   {
