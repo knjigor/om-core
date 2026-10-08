@@ -121,8 +121,8 @@ dependencies {
     huaweiApi project(':sdk:location:gms:google')
     fdroidApi project(':sdk:location:gms:foss')
 
-    api project(':sdk:wear:core')
-    googleApi project(':sdk:wear:gms')
+//     api project(':sdk:wear:core')
+//     googleApi project(':sdk:wear:gms')
 
     coreLibraryDesugaring libs.android.tools.desugaring
 

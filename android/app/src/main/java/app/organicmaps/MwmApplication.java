@@ -36,7 +36,7 @@ import app.organicmaps.sdk.maplayer.subway.SubwayManager;
 import app.organicmaps.sdk.routing.RoutingController;
 import app.organicmaps.sdk.util.Config;
 import app.organicmaps.sdk.util.log.Logger;
-import app.organicmaps.sdk.wear.WearBridge;
+// import app.organicmaps.sdk.wear.WearBridge;
 import app.organicmaps.util.ThemeSwitcher;
 import app.organicmaps.util.Utils;
 import java.io.IOException;
@@ -134,8 +134,8 @@ public class MwmApplication extends Application implements Application.ActivityL
     // Mirror navigation start/stop to a paired Wear OS device from the routing state owner, so every
     // trigger is covered (phone UI, Android Auto, notification stop). No-op unless the Google Wear
     // bridge is present; the initial publish corrects stale state left by a force-killed session.
-    RoutingController.get().addNavigationStateListener(WearBridge::publishNavigating);
-    WearBridge.publishNavigating(RoutingController.get().isNavigating());
+//     RoutingController.get().addNavigationStateListener(WearBridge::publishNavigating);
+//     WearBridge.publishNavigating(RoutingController.get().isNavigating());
     // Navigation can end in the background (notification, Android Auto, arrival). The routing state owner
     // covers every trigger, including a stop when NavigationService was never started.
     RoutingController.get().addNavigationStateListener(navigating -> {
