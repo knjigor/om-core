@@ -27,11 +27,19 @@
 #include "drape/support_manager.hpp"
 
 #include "coding/files_container.hpp"
+#include "coding/string_utf8_multilang.hpp"
+
+#include "routing/maxspeeds.hpp"
+#include "defines.hpp"
+#include <mutex>
 
 #include "geometry/angles.hpp"
 #include "geometry/distance_on_sphere.hpp"
 #include "geometry/mercator.hpp"
 #include "geometry/point_with_altitude.hpp"
+
+#include "indexer/feature_algo.hpp"
+#include "indexer/classificator.hpp"
 
 #include "indexer/feature_altitude.hpp"
 #include "indexer/validate_and_format_contacts.hpp"
@@ -1943,6 +1951,176 @@ JNIEXPORT void Java_app_organicmaps_sdk_Framework_nativeDidShowDonationPage(JNIE
 JNIEXPORT void Java_app_organicmaps_sdk_Framework_nativeResetDonations(JNIEnv *, jclass)
 {
   frm()->ResetDonations();
+}
+
+// --- GLOBALNI KEŠ ZA OGRANIČENJA BRZINE ---
+static std::shared_ptr<routing::Maxspeeds> g_cachedMaxspeeds;
+static MwmSet::MwmId g_cachedMwmId;
+static std::mutex g_maxspeedsMutex;
+
+JNIEXPORT jobjectArray Java_app_organicmaps_sdk_Framework_nativeGetRoadInfo(JNIEnv * env, jclass, jdouble lat, jdouble lon)
+{
+  if (!g_framework)
+    return nullptr;
+
+  m2::PointD const pt = mercator::FromLatLon(lat, lon);
+  // Povećavamo radijus pretrage na 35 metara radi bolje pokrivenosti pri vožnji
+  m2::RectD const rect = mercator::RectByCenterXYAndSizeInMeters(pt, 35.0);
+
+  std::string streetName = "";
+  std::string maxSpeed = "";
+  std::string snappedLatStr = "0.0";
+  std::string snappedLonStr = "0.0";
+  bool isTunnel = false;
+  double minDistance = std::numeric_limits<double>::max();
+  m2::PointD bestSnappedPoint = pt;
+
+  auto const & dataSource = frm()->GetDataSource();
+
+  dataSource.ForEachInRect([&](FeatureType & ft)
+  {
+    if (ft.GetGeomType() != feature::GeomType::Line)
+      return;
+
+    feature::TypesHolder types(ft);
+    bool isRoad = false;
+    for (auto const t : types)
+    {
+      std::string const typeStr = classif().GetReadableObjectName(t);
+      if (typeStr.find("highway") != std::string::npos)
+      {
+        isRoad = true;
+        break;
+      }
+    }
+
+    if (!isRoad)
+      return;
+
+    ft.ParseGeometry(FeatureType::BEST_GEOMETRY);
+    size_t const count = ft.GetPointsCount();
+    if (count < 2)
+      return;
+
+    m2::PointD closestPt = pt;
+    double minDistForFeature = std::numeric_limits<double>::max();
+
+    for (size_t i = 1; i < count; ++i)
+    {
+      m2::ParametrizedSegment<m2::PointD> const segment(ft.GetPoint(i - 1), ft.GetPoint(i));
+      m2::PointD const p = segment.ClosestPointTo(pt);
+      double const d = mercator::DistanceOnEarth(p, pt);
+      if (d < minDistForFeature)
+      {
+        minDistForFeature = d;
+        closestPt = p;
+      }
+    }
+
+    if (minDistForFeature < minDistance)
+    {
+      minDistance = minDistForFeature;
+      bestSnappedPoint = closestPt;
+
+      isTunnel = false;
+      for (auto const t : types)
+      {
+        std::string const typeStr = classif().GetReadableObjectName(t);
+        if (typeStr.find("tunnel") != std::string::npos)
+        {
+          isTunnel = true;
+          break;
+        }
+      }
+
+      std::string_view const nameView = ft.GetName(StringUtf8Multilang::kDefaultCode);
+      if (!nameView.empty())
+        streetName = std::string(nameView);
+      else
+        streetName = "";
+
+      // --- PRAVO ČITANJE ZNAKOVA IZ RUTING GRAFA (SA THREAD-SAFE KEŠOM) ---
+      maxSpeed = "";
+      FeatureID const & fid = ft.GetID();
+
+      std::shared_ptr<routing::Maxspeeds> localMaxspeeds;
+      {
+        std::lock_guard<std::mutex> lock(g_maxspeedsMutex);
+
+        if (g_cachedMwmId != fid.m_mwmId)
+        {
+          g_cachedMwmId = fid.m_mwmId;
+          g_cachedMaxspeeds.reset();
+
+          auto const handle = dataSource.GetMwmHandleById(fid.m_mwmId);
+          if (handle.IsAlive())
+          {
+            try
+            {
+              g_cachedMaxspeeds = routing::LoadMaxspeeds(handle);
+            }
+            catch (...)
+            {
+            }
+          }
+        }
+        localMaxspeeds = g_cachedMaxspeeds;
+      }
+
+      if (localMaxspeeds)
+      {
+        routing::Maxspeed const maxspeed = localMaxspeeds->GetMaxspeed(fid.m_index);
+        if (maxspeed.IsValid())
+        {
+          auto const speedVal = maxspeed.GetForwardKmPH();
+          if (speedVal > 0 && speedVal < 300)
+          {
+            maxSpeed = std::to_string(speedVal);
+          }
+        }
+      }
+
+      // --- FALLBACK LOGIKA (Ako znak ne postoji u bazi za ovaj put) ---
+      if (maxSpeed.empty())
+      {
+        for (auto const t : types)
+        {
+          std::string const typeStr = classif().GetReadableObjectName(t);
+
+          if (typeStr.find("highway-motorway") != std::string::npos) { maxSpeed = "130"; break; }
+          else if (typeStr.find("highway-trunk") != std::string::npos) { maxSpeed = "100"; break; }
+          else if (typeStr.find("highway-primary") != std::string::npos) { maxSpeed = "80"; break; }
+          else if (typeStr.find("highway-secondary") != std::string::npos) { maxSpeed = "80"; break; }
+          else if (typeStr.find("highway-tertiary") != std::string::npos) { maxSpeed = "50"; break; }
+          else if (typeStr.find("highway-unclassified") != std::string::npos) { maxSpeed = "50"; break; }
+          else if (typeStr.find("highway-residential") != std::string::npos) { maxSpeed = "50"; break; }
+          else if (typeStr.find("highway-living_street") != std::string::npos) { maxSpeed = "30"; break; }
+          else if (typeStr.find("highway-service") != std::string::npos) { maxSpeed = "30"; break; }
+          else if (typeStr.find("highway-city") != std::string::npos) { maxSpeed = "50"; break; }
+        }
+      }
+    }
+  }, rect, scales::GetUpperScale());
+
+  if (minDistance > 35.0)
+  {
+    streetName = "OFFROAD";
+    isTunnel = false;
+  }
+  else
+  {
+    ms::LatLon const snappedLatLon = mercator::ToLatLon(bestSnappedPoint);
+    snappedLatStr = std::to_string(snappedLatLon.m_lat);
+    snappedLonStr = std::to_string(snappedLatLon.m_lon);
+  }
+
+  jobjectArray result = env->NewObjectArray(5, jni::GetStringClass(env), nullptr);
+  env->SetObjectArrayElement(result, 0, jni::ToJavaString(env, streetName));
+  env->SetObjectArrayElement(result, 1, jni::ToJavaString(env, maxSpeed));
+  env->SetObjectArrayElement(result, 2, jni::ToJavaString(env, snappedLatStr));
+  env->SetObjectArrayElement(result, 3, jni::ToJavaString(env, snappedLonStr));
+  env->SetObjectArrayElement(result, 4, jni::ToJavaString(env, isTunnel ? "true" : "false"));
+  return result;
 }
 }  // extern "C"
 

@@ -342,7 +342,7 @@ void MyPositionController::NextMode(ScreenBase const & screen)
   // updates again.
   if (IsWaitingForLocation())
   {
-    m_desiredInitMode = location::Follow;
+    m_desiredInitMode = location::FollowAndRotate;
     ChangeMode(location::NotFollowNoPosition);
     return;
   }
@@ -355,8 +355,8 @@ void MyPositionController::NextMode(ScreenBase const & screen)
     if (!m_isPositionAssigned)
     {
       // This is the first user location request (button touch) after controller's initialization
-      // with some previous not Follow state. The new mode will be Follow to center on the position.
-      m_desiredInitMode = location::Follow;
+      // with some previous not Follow state. The new mode will be FollowAndRotate to center and rotate on position.
+      m_desiredInitMode = location::FollowAndRotate;
     }
     return;
   }
@@ -367,10 +367,10 @@ void MyPositionController::NextMode(ScreenBase const & screen)
   if (currentZoom < kZoomThreshold)
     preferredZoomLevel = std::min(GetZoomLevel(screen, m_position, m_errorRadius), kMaxScaleZoomLevel);
 
-  // In routing not-follow -> follow-and-rotate, otherwise not-follow -> follow.
+  // Not-follow -> follow-and-rotate.
   if (m_mode == location::NotFollow)
   {
-    ChangeMode(m_isInRouting ? location::FollowAndRotate : location::Follow);
+    ChangeMode(location::FollowAndRotate);
     UpdateViewport(preferredZoomLevel);
     return;
   }
@@ -473,7 +473,7 @@ void MyPositionController::OnLocationUpdate(location::GpsInfo const & info, bool
     }
     else
     {
-      ChangeMode(location::Follow);
+      ChangeMode(location::FollowAndRotate);
       if (m_hints.m_isFirstLaunch)
       {
         if (!AnimationSystem::Instance().AnimationExists(Animation::Object::MapPlane))
@@ -659,10 +659,10 @@ void MyPositionController::OnEnterForeground(double backgroundTime)
   // Handle the case when the app was in the background for a long time and the user is opening the app.
   if (backgroundTime >= kMaxTimeInBackgroundSec)
   {
-    // When location was active during previous session the app will try to follow the user.
+    // When location was active during previous session the app will try to follow and rotate with user.
     if (m_mode == location::NotFollow)
     {
-      ChangeMode(m_isInRouting ? location::FollowAndRotate : location::Follow);
+      ChangeMode(location::FollowAndRotate);
       UpdateViewport(kDoNotChangeZoom);
     }
 

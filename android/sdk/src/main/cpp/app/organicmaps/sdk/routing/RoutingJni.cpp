@@ -225,6 +225,7 @@ jobject CreateRoutingInfo(JNIEnv * env, routing::FollowingInfo const & info, Rou
     "("
     "Lapp/organicmaps/sdk/util/Distance;"                      // distToTarget
     "Lapp/organicmaps/sdk/util/Distance;"                      // distToTurn
+    "Lapp/organicmaps/sdk/util/Distance;"                      // distToNextTurn
     "Ljava/lang/String;"                                       // currentStreet
     "Ljava/lang/String;"                                       // nextStreet
     "Lapp/organicmaps/sdk/routing/roadshield/RoadShieldInfo;"  // nextStreetRoadShields
@@ -248,6 +249,7 @@ jobject CreateRoutingInfo(JNIEnv * env, routing::FollowingInfo const & info, Rou
   jobject const result = env->NewObject(klass, ctorRouteInfoID,
     ToJavaDistance(env, info.m_distToTarget),
     ToJavaDistance(env, info.m_distToTurn),
+    ToJavaDistance(env, info.m_distToNextTurn),
     ToJavaString(env, info.m_currentStreetName),
     ToJavaString(env, info.m_nextStreetName),
     ToJavaRoadShieldInfo(env, info.m_nextStreetShields),
@@ -262,7 +264,8 @@ jobject CreateRoutingInfo(JNIEnv * env, routing::FollowingInfo const & info, Rou
     CreateLanesInfo(env, info.m_lanes),
     info.m_speedLimitMps,
     static_cast<jboolean>(rm.IsSpeedCamLimitExceeded()),
-    static_cast<jboolean>(rm.GetSpeedCamManager().ShouldPlayBeepSignal())
+    static_cast<jboolean>(rm.GetSpeedCamManager().ShouldPlayBeepSignal()),
+    static_cast<jboolean>(info.m_isInTunnel)
   );
   // clang-format on
   ASSERT(result, (DescribeException()));

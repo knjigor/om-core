@@ -230,7 +230,8 @@ void TextureState::ApplyTextures(ref_ptr<GraphicsContext> context, RenderState c
         GLFunctions::glUniformValuei(texLoc, slot);
         tex->SetFilter(state.GetTextureFilter());
         slot++;
-        m_usedTextureTypes.push_back(tex->GetHardwareTexture()->GetTarget());
+        if (auto const hwTex = tex->GetHardwareTexture(); hwTex != nullptr)
+          m_usedTextureTypes.push_back(hwTex->GetTarget());
       }
     }
   }
@@ -256,7 +257,8 @@ void TextureState::ApplyTextures(ref_ptr<GraphicsContext> context, RenderState c
       {
         texture.second->UpdateState(context);
         t = texture.second->GetHardwareTexture();
-        CHECK(t != nullptr, ());
+        if (t == nullptr)
+          continue;
       }
       t->Bind(context);
       t->SetFilter(state.GetTextureFilter());
@@ -268,7 +270,11 @@ void TextureState::ApplyTextures(ref_ptr<GraphicsContext> context, RenderState c
       descriptor.m_imageDescriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
       auto const it = bindings.find(texture.first);
-      CHECK(it != bindings.end(), (texture.first, " is not found in the program", p->GetName()));
+      if (it == bindings.end())
+      {
+        LOG(LWARNING, (texture.first, " is not found in the program ", p->GetName()));
+        continue;
+      }
       descriptor.m_textureSlot = it->second;
 
       descriptor.m_id = texture.second->GetID();

@@ -133,6 +133,11 @@ public final class OrganicMaps implements DefaultLifecycleObserver
   public boolean init(@NonNull Runnable onComplete) throws IOException
   {
     initNativePlatform();
+    if (mFrameworkInitialized)
+    {
+      onComplete.run();
+      return true;
+    }
     return initNativeFramework(onComplete);
   }
 
@@ -191,22 +196,28 @@ public final class OrganicMaps implements DefaultLifecycleObserver
   private boolean initNativeFramework(@NonNull Runnable onComplete)
   {
     if (mFrameworkInitialized)
+    {
+      onComplete.run();
       return false;
+    }
 
-    nativeInitFramework(onComplete);
+    nativeInitFramework(() -> {
+      initNativeStrings();
+      SearchEngine.INSTANCE.initialize();
+      BookmarkManager.loadBookmarks();
+      TtsPlayer.INSTANCE.initialize(mContext);
+      RoutingController.get().initialize(mLocationHelper);
+      TrafficManager.INSTANCE.initialize();
+      mSubwayManager.initialize();
+      mIsolinesManager.initialize();
+      ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
 
-    initNativeStrings();
-    SearchEngine.INSTANCE.initialize();
-    BookmarkManager.loadBookmarks();
-    TtsPlayer.INSTANCE.initialize(mContext);
-    RoutingController.get().initialize(mLocationHelper);
-    TrafficManager.INSTANCE.initialize();
-    mSubwayManager.initialize();
-    mIsolinesManager.initialize();
-    ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+      Logger.i(TAG, "Framework initialized");
+      mFrameworkInitialized = true;
 
-    Logger.i(TAG, "Framework initialized");
-    mFrameworkInitialized = true;
+      if (onComplete != null)
+        onComplete.run();
+    });
     return true;
   }
 

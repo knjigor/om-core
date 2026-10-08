@@ -170,7 +170,12 @@ VulkanObject VulkanObjectManager::CreateImage(VkImageUsageFlags usageFlags, VkFo
   // and may make the exact format/tiling/usage combination unsupported.
   if ((usageFlags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) == 0)
     imageCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-  CHECK_VK_CALL(vkCreateImage(m_device, &imageCreateInfo, nullptr, &result.m_image));
+  VkResult const createImageStatus = vkCreateImage(m_device, &imageCreateInfo, nullptr, &result.m_image);
+  if (createImageStatus != VK_SUCCESS)
+  {
+    LOG_ERROR_VK_CALL(vkCreateImage, createImageStatus);
+    return result;
+  }
 
   VkMemoryRequirements memReqs = {};
   vkGetImageMemoryRequirements(m_device, result.m_image, &memReqs);
@@ -179,7 +184,12 @@ VulkanObject VulkanObjectManager::CreateImage(VkImageUsageFlags usageFlags, VkFo
     std::lock_guard<std::mutex> lock(m_mutex);
     result.m_allocation =
         m_memoryManager.Allocate(VulkanMemoryManager::ResourceType::Image, memReqs, 0 /* blockHash */);
-    CHECK_VK_CALL(vkBindImageMemory(m_device, result.m_image, result.GetMemory(), result.GetAlignedOffset()));
+    VkResult const bindStatus = vkBindImageMemory(m_device, result.m_image, result.GetMemory(), result.GetAlignedOffset());
+    if (bindStatus != VK_SUCCESS)
+    {
+      LOG_ERROR_VK_CALL(vkBindImageMemory, bindStatus);
+      return result;
+    }
   }
 
   VkImageViewCreateInfo viewCreateInfo = {};
@@ -203,7 +213,12 @@ VulkanObject VulkanObjectManager::CreateImage(VkImageUsageFlags usageFlags, VkFo
   viewCreateInfo.subresourceRange.baseArrayLayer = 0;
   viewCreateInfo.subresourceRange.layerCount = layerCount;
   viewCreateInfo.image = result.m_image;
-  CHECK_VK_CALL(vkCreateImageView(m_device, &viewCreateInfo, nullptr, &result.m_imageView));
+  VkResult const createViewStatus = vkCreateImageView(m_device, &viewCreateInfo, nullptr, &result.m_imageView);
+  if (createViewStatus != VK_SUCCESS)
+  {
+    LOG_ERROR_VK_CALL(vkCreateImageView, createViewStatus);
+    return result;
+  }
 
 #ifdef ENABLE_TRACE
   m_imagesCount++;

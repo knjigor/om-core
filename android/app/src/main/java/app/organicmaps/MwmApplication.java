@@ -19,7 +19,7 @@ import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 import androidx.preference.PreferenceManager;
-import app.organicmaps.background.OsmUploadWork;
+
 import app.organicmaps.downloader.DownloaderNotifier;
 import app.organicmaps.location.TrackRecordingService;
 import app.organicmaps.routing.NavigationService;
@@ -217,14 +217,22 @@ public class MwmApplication extends Application implements Application.ActivityL
   {
     Logger.d(TAG);
 
-    getLocationHelper().resumeLocationInForeground();
+    if (hasLocationPermission(this))
+    {
+      getLocationHelper().resumeLocationInForeground();
+    }
+  }
+
+  public static boolean hasLocationPermission(@NonNull Context context)
+  {
+    return androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED ||
+           androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_COARSE_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED;
   }
 
   private void onBackground()
   {
     Logger.d(TAG);
 
-    OsmUploadWork.startActionUploadOsmChanges(this);
     stopLocationInBackgroundIfUnused();
   }
 

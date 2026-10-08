@@ -52,7 +52,7 @@ DrapeEngine::DrapeEngine(Params && params)
   using namespace location;
   using namespace settings;
 
-  EMyPositionMode mode = PendingPosition;
+  EMyPositionMode mode = FollowAndRotate;
   if (Get(kLocationStateMode, mode) && mode == FollowAndRotate)
   {
     // If the screen rect setting in follow and rotate mode is missing or invalid, it could cause

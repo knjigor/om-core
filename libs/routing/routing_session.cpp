@@ -421,11 +421,23 @@ void RoutingSession::GetRouteFollowingInfo(FollowingInfo & info) const
   else
     info.m_speedLimitMps = -1.0;
 
+  info.m_isInTunnel = m_route->IsInTunnel();
+
   // The turn after the next one.
   if (m_routingSettings.m_showTurnAfterNext)
-    info.m_nextTurn = m_turnNotificationsMgr.GetSecondTurnNotification();
+  {
+    double distanceToNextTurnMeters = 0.;
+    turns::TurnItem nextTurnItem;
+    if (m_route->GetNextTurn(distanceToNextTurnMeters, nextTurnItem))
+    {
+      info.m_nextTurn = nextTurnItem.m_turn;
+      info.m_distToNextTurn = platform::Distance::CreateFormatted(distanceToNextTurnMeters);
+    }
+  }
   else
+  {
     info.m_nextTurn = routing::turns::CarDirection::None;
+  }
 
   info.m_exitNum = turn.m_exitNum;
   info.m_time = static_cast<int>(std::max(kMinimumETASec, m_route->GetCurrentTimeToEndSec()));

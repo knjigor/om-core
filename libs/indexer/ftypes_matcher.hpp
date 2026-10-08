@@ -474,6 +474,15 @@ public:
   IsBridgeOrTunnelChecker();
 };
 
+class IsTunnelChecker : public BaseChecker
+{
+  virtual bool IsMatched(uint32_t type) const override;
+
+public:
+  IsTunnelChecker();
+  DECLARE_CHECKER_INSTANCE(IsTunnelChecker);
+};
+
 class IsIslandChecker : public BaseChecker
 {
   IsIslandChecker();

@@ -12,6 +12,7 @@ import app.organicmaps.sdk.bookmarks.data.DistanceAndAzimut;
 import app.organicmaps.sdk.bookmarks.data.MapObject;
 import app.organicmaps.sdk.products.ProductsConfig;
 import app.organicmaps.sdk.routing.JunctionInfo;
+import app.organicmaps.sdk.routing.RouteAltitudeData;
 import app.organicmaps.sdk.routing.RouteMarkData;
 import app.organicmaps.sdk.routing.RouteMarkType;
 import app.organicmaps.sdk.routing.RoutingInfo;
@@ -136,6 +137,9 @@ public class Framework
 
   public static native String nativeGetAddress(double lat, double lon);
 
+  @Nullable
+  public static native String[] nativeGetRoadInfo(double lat, double lon);
+
   public static native void nativePlacePageActivationListener(@NonNull PlacePageActivationListener listener);
 
   public static native void nativeRemovePlacePageActivationListener(@NonNull PlacePageActivationListener listener);
@@ -241,7 +245,7 @@ public class Framework
   public static native JunctionInfo[] nativeGetRouteJunctionPoints(double maxDistM);
 
   @Nullable
-  public static native app.organicmaps.sdk.routing.RouteAltitudeData nativeGetRouteAltitudeData();
+  public static native RouteAltitudeData nativeGetRouteAltitudeData();
 
   public static native void nativeRouteSetElevationActivePoint(double distanceMeters);
 

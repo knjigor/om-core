@@ -41,7 +41,8 @@ void ApplyTexturesForMetal(ref_ptr<GraphicsContext> context, ref_ptr<GpuProgram>
     {
       texture.second->UpdateState(context);
       t = texture.second->GetHardwareTexture();
-      CHECK(t != nullptr, ());
+      if (t == nullptr)
+        continue;
     }
 
     t->SetFilter(state.GetTextureFilter());

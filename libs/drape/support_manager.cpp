@@ -99,6 +99,8 @@ bool SupportManager::IsVulkanForbidden()
 bool SupportManager::IsVulkanForbidden(std::string const & deviceName, Version apiVersion, Version driverVersion,
                                        bool isCustomROM, int sdkVersion)
 {
+  return true; // Privremeno zabrani Vulkan i prisili OpenGL ES
+
   LOG(LINFO, ("Device =", deviceName, "API =", apiVersion, "Driver =", driverVersion, "SDK =", sdkVersion));
 
   // Vulkan crashes on Android Emulator (API 30 and API 36), likely due to some bug in the emulator's driver.

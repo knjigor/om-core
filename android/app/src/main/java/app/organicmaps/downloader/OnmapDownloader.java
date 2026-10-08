@@ -1,7 +1,7 @@
 package app.organicmaps.downloader;
 
+import android.app.Activity;
 import android.content.Context;
-import android.location.Location;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.Button;
@@ -152,18 +152,19 @@ public class OnmapDownloader
           {
             sizeText = StringUtils.getFileSizeString(mContext, mCurrentCountry.totalSize);
 
+            boolean isConnected = false;
+            try {
+              isConnected = ConnectionState.INSTANCE.isConnected();
+            } catch (Exception e) {
+              isConnected = true;
+            }
+
             if (shouldAutoDownload && Config.isAutodownloadEnabled() && !sAutodownloadLocked && !failed
-                && ConnectionState.INSTANCE.isWifiConnected())
+                && isConnected)
             {
-              Location loc = MwmApplication.from(mContext).getLocationHelper().getSavedLocation();
-              if (loc != null)
+              if (MapManager.nativeHasSpaceToDownloadCountry(mCurrentCountry.id))
               {
-                String country = MapManager.nativeFindCountry(loc.getLatitude(), loc.getLongitude());
-                if (TextUtils.equals(mCurrentCountry.id, country)
-                    && MapManager.nativeHasSpaceToDownloadCountry(country))
-                {
-                  MapManagerHelper.startDownload(mContext, mCurrentCountry.id);
-                }
+                MapManagerHelper.startDownload(mContext, mCurrentCountry.id);
               }
             }
 
@@ -178,7 +179,7 @@ public class OnmapDownloader
     UiUtils.showIf(showFrame, mFrame);
   }
 
-  public OnmapDownloader(MwmActivity activity, View onMapDownloader)
+  public OnmapDownloader(Activity activity, View onMapDownloader)
   {
     mContext = activity;
     mFrame = onMapDownloader;
@@ -210,7 +211,8 @@ public class OnmapDownloader
           else
           {
             MapManagerHelper.startDownload(mContext, mCurrentCountry.id);
-            activity.requestPostNotificationsPermission();
+            if (activity instanceof MwmActivity)
+              ((MwmActivity) activity).requestPostNotificationsPermission();
           }
         }));
 

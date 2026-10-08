@@ -2,8 +2,8 @@ plugins {
   id 'com.android.library'
 }
 
-apply from: "${rootProject.rootDir}/groovy/common-config.gradle"
-apply from: "${rootProject.rootDir}/groovy/publishing.gradle"
+apply from: "${rootProject.rootDir}/organicmaps/android/groovy/common-config.gradle"
+apply from: "${rootProject.rootDir}/organicmaps/android/groovy/publishing.gradle"
 
 android {
   namespace 'app.organicmaps.sdk.widgets.lanes'

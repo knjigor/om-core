@@ -47,6 +47,8 @@ public:
   turns::CarDirection m_turn;
   /// Turn after m_turn. Returns NoTurn if there is no turns after.
   turns::CarDirection m_nextTurn;
+  /// Formatted distance to the turn after the next one.
+  platform::Distance m_distToNextTurn;
   uint32_t m_exitNum;
   //@}
   int m_time;
@@ -81,5 +83,8 @@ public:
   // Current speed limit in meters per second.
   // If no info about speed limit then m_speedLimitMps < 0.
   double m_speedLimitMps = -1.0;
+
+  // Whether current position on route is inside a tunnel feature
+  bool m_isInTunnel = false;
 };
 }  // namespace routing

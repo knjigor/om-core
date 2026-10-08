@@ -15,6 +15,8 @@ public final class RoutingInfo
   public final Distance distToTarget;
   // Next turn.
   public final Distance distToTurn;
+  // Next next turn.
+  public final Distance distToNextTurn;
 
   public final int totalTimeInSeconds;
   // Current street name.
@@ -44,8 +46,10 @@ public final class RoutingInfo
   public final double speedLimitMps;
   private final boolean speedCamLimitExceeded;
   private final boolean shouldPlayWarningSignal;
+  public final boolean isInTunnel;
 
-  private RoutingInfo(Distance distToTarget, Distance distToTurn, String currentStreet, String nextStreet,
+  @Keep
+  private RoutingInfo(Distance distToTarget, Distance distToTurn, Distance distToNextTurn, String currentStreet, String nextStreet,
                       @Nullable RoadShieldInfo nextStreetRoadShields, String nextNextStreet,
                       @Nullable RoadShieldInfo nextNextStreetRoadShields, double completionPercent,
                       @NonNull CarDirection carTurnDirection, @NonNull CarDirection carNextTurnDirection,
@@ -53,8 +57,24 @@ public final class RoutingInfo
                       @Nullable LaneInfo[] lanes, double speedLimitMps, boolean speedLimitExceeded,
                       boolean shouldPlayWarningSignal)
   {
+    this(distToTarget, distToTurn, distToNextTurn, currentStreet, nextStreet,
+         nextStreetRoadShields, nextNextStreet, nextNextStreetRoadShields, completionPercent,
+         carTurnDirection, carNextTurnDirection, pedestrianDirection, exitNum, totalTime,
+         lanes, speedLimitMps, speedLimitExceeded, shouldPlayWarningSignal, false);
+  }
+
+  @Keep
+  private RoutingInfo(Distance distToTarget, Distance distToTurn, Distance distToNextTurn, String currentStreet, String nextStreet,
+                      @Nullable RoadShieldInfo nextStreetRoadShields, String nextNextStreet,
+                      @Nullable RoadShieldInfo nextNextStreetRoadShields, double completionPercent,
+                      @NonNull CarDirection carTurnDirection, @NonNull CarDirection carNextTurnDirection,
+                      @NonNull PedestrianDirection pedestrianDirection, int exitNum, int totalTime,
+                      @Nullable LaneInfo[] lanes, double speedLimitMps, boolean speedLimitExceeded,
+                      boolean shouldPlayWarningSignal, boolean isInTunnel)
+  {
     this.distToTarget = distToTarget;
     this.distToTurn = distToTurn;
+    this.distToNextTurn = distToNextTurn;
     this.currentStreet = currentStreet;
     this.nextStreet = nextStreet;
     this.nextStreetRoadShields = nextStreetRoadShields;
@@ -70,6 +90,7 @@ public final class RoutingInfo
     this.speedLimitMps = speedLimitMps;
     this.speedCamLimitExceeded = speedLimitExceeded;
     this.shouldPlayWarningSignal = shouldPlayWarningSignal;
+    this.isInTunnel = isInTunnel;
   }
 
   public boolean isSpeedCamLimitExceeded()
@@ -84,7 +105,6 @@ public final class RoutingInfo
 
   public boolean hasNextNextTurn()
   {
-    return nextNextStreet != null && !nextNextStreet.isEmpty() && nextCarDirection != CarDirection.NoTurn
- && nextCarDirection != CarDirection.GoStraight;
+    return nextCarDirection != CarDirection.NoTurn && nextCarDirection != CarDirection.GoStraight;
   }
 }
