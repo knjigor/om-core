@@ -21,7 +21,7 @@ final class AudioFocusManager
   // Keep in sync with audioAttributesCompat in the constructor below.
   public static final AudioAttributes AUDIO_ATTRIBUTES =
       new AudioAttributes.Builder()
-          .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+          .setUsage(AudioAttributes.USAGE_MEDIA)
           .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
           .build();
 
@@ -42,7 +42,7 @@ final class AudioFocusManager
     // Keep in sync with AUDIO_ATTRIBUTES above.
     final AudioAttributesCompat audioAttributesCompat =
         new AudioAttributesCompat.Builder()
-            .setUsage(AudioAttributesCompat.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+            .setUsage(AudioAttributesCompat.USAGE_MEDIA)
             .setContentType(AudioAttributesCompat.CONTENT_TYPE_SPEECH)
             .build();
     mAudioFocusRequest = new AudioFocusRequestCompat.Builder(AudioManagerCompat.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
