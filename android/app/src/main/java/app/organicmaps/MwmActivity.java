@@ -2168,4 +2168,30 @@ public class MwmActivity extends BaseMwmFragmentActivity
         .setPositiveButton(R.string.close, (dlg, which) -> this.moveTaskToBack(true))
         .show();
   }
+
+  @Override
+  public boolean onKeyDown(int keyCode, KeyEvent event)
+  {
+    switch (keyCode)
+    {
+      // --- ZOOM OUT (F6 or -) ---
+      case KeyEvent.KEYCODE_F6:
+      case KeyEvent.KEYCODE_MINUS:
+      case KeyEvent.KEYCODE_NUMPAD_SUBTRACT:
+        Map.zoomOut();
+        return true;
+
+      // --- ZOOM IN (F5 or +) ---
+      case KeyEvent.KEYCODE_F5:
+      case KeyEvent.KEYCODE_PLUS:
+      case KeyEvent.KEYCODE_NUMPAD_ADD:
+      case KeyEvent.KEYCODE_EQUALS:
+        Map.zoomIn();
+        return true;
+
+      // --- ALL OTHER KEYS ---
+      default:
+        return super.onKeyDown(keyCode, event);
+    }
+  }
 }
