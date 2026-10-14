@@ -826,10 +826,20 @@ public:
 private:
   void SnapToNearestRoadInFreeRide(location::GpsInfo & info);
 
+public:
+  bool IsCurrentRoadTunnel() const { return m_isOnTunnelRoad; }
+
+private:
   settings::UsageStats m_usageStats;
 
   bool m_showDownloadedRegions = false;
-  bool m_snapToRoadFreeRide = false;
+  bool m_snapToRoadFreeRide = true;
+
+  FeatureID m_lockedRoadFeatureId;
+  m2::PointD m_lastSnappedMercator = m2::PointD::Zero();
+  double m_lastSnappedBearingDeg = 0.0;
+  bool m_hasSnappedState = false;
+  bool m_isOnTunnelRoad = false;
 
 public:
   power_management::PowerManager & GetPowerManager() { return m_powerManager; }

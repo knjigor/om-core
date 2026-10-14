@@ -354,6 +354,7 @@ public class Framework
 
   public static native boolean nativeIsSnapToRoadFreeRideEnabled();
   public static native void nativeSetSnapToRoadFreeRideEnabled(boolean enabled);
+  public static native boolean nativeIsCurrentRoadTunnel();
 
   public static native void nativeSetTransitSchemeEnabled(boolean enabled);
   public static native void nativeSaveSettingSchemeEnabled(boolean enabled);

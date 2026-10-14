@@ -1681,6 +1681,11 @@ JNIEXPORT jboolean Java_app_organicmaps_sdk_Framework_nativeIsSnapToRoadFreeRide
   return static_cast<jboolean>(frm()->IsSnapToRoadFreeRideEnabled());
 }
 
+JNIEXPORT jboolean Java_app_organicmaps_sdk_Framework_nativeIsCurrentRoadTunnel(JNIEnv *, jclass)
+{
+  return static_cast<jboolean>(frm()->IsCurrentRoadTunnel());
+}
+
 // static void nativeZoomToPoint(double lat, double lon, int zoom, boolean animate);
 JNIEXPORT void Java_app_organicmaps_sdk_Framework_nativeZoomToPoint(JNIEnv * env, jclass, jdouble lat, jdouble lon,
                                                                     jint zoom, jboolean animate)

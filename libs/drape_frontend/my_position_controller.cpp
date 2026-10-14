@@ -27,7 +27,7 @@ int const kPositionRoutingOffsetY = 104;
 double const kMinSpeedThresholdMps = 0.7;  // for the pedestrian mode 2.5 km/h
 /// @todo Should depend on the _previous_ avg speed (say for the last 5 minutes).
 /// Bigger for cars (up to 30 seconds is ok, IMO) and lower for pedestrians.
-double const kGpsBearingLifetimeSec = 3.0;
+double const kGpsBearingLifetimeSec = 30.0;
 
 double const kMaxTimeInBackgroundSec = 60.0 * 60 * 30;  // 30 hours before starting detecting position again
 double const kMaxNotFollowRoutingTimeSec = 20.0;
@@ -805,7 +805,9 @@ double MyPositionController::GetDrawableAzimut()
 void MyPositionController::CreateAnim(m2::PointD const & oldPos, double oldAzimut, ScreenBase const & screen)
 {
   double moveDuration = PositionInterpolator::GetMoveDuration(oldPos, m_position, screen);
-  if (m_currentSpeedMps > kMinSpeedThresholdMps && IsModeChangeViewport())
+  if (m_gpsUpdateIntervalSec <= 0.12)
+    moveDuration = std::max(m_gpsUpdateIntervalSec, 0.04);
+  else if (m_currentSpeedMps > kMinSpeedThresholdMps && IsModeChangeViewport())
     moveDuration = std::clamp(m_gpsUpdateIntervalSec * 1.02, 0.2, 1.5);
 
   double const rotateDuration = AngleInterpolator::GetRotateDuration(oldAzimut, m_drawDirection);

@@ -204,7 +204,7 @@ std::pair<MwmSet::MwmId, MwmSet::RegResult> Framework::RegisterMap(LocalCountryF
 void Framework::OnLocationError(TLocationError /*error*/)
 {
   m_trafficManager.UpdateMyPosition(TrafficManager::MyPosition());
-  if (m_drapeEngine != nullptr)
+  if (m_drapeEngine != nullptr && !m_isOnTunnelRoad)
     m_drapeEngine->LoseLocation();
 }
 
@@ -3072,22 +3072,41 @@ void Framework::SetSnapToRoadFreeRideEnabled(bool enabled)
 
 void Framework::SnapToNearestRoadInFreeRide(location::GpsInfo & info)
 {
-  if (!m_snapToRoadFreeRide)
+  if (!m_snapToRoadFreeRide || m_routingManager.IsRoutingActive())
+  {
+    m_hasSnappedState = false;
+    m_isOnTunnelRoad = false;
     return;
-
-  if (m_routingManager.IsRoutingActive())
-    return;
-
-  if (!info.HasSpeed() || info.m_speed < 2.5)
-    return;
+  }
 
   m2::PointD const userPos = mercator::FromLatLon(info.m_latitude, info.m_longitude);
+
+  // Protection at stopping (Zero-Drift on traffic light)
+  if (!info.HasSpeed() || info.m_speed < 1.8)
+  {
+    if (m_hasSnappedState)
+    {
+      double const distFromLastSnappedM = mercator::DistanceOnEarth(userPos, m_lastSnappedMercator);
+      if (distFromLastSnappedM <= 25.0)
+      {
+        ms::LatLon const lastLL = mercator::ToLatLon(m_lastSnappedMercator);
+        info.m_latitude = lastLL.m_lat;
+        info.m_longitude = lastLL.m_lon;
+        info.m_bearing = m_lastSnappedBearingDeg;
+        return;
+      }
+    }
+    return;
+  }
+
   m2::RectD const searchRect = mercator::RectByCenterXYAndSizeInMeters(userPos, 15.0);
 
-  double bestDistM = 14.01;
+  double bestEffectiveDistM = 14.01;
   m2::PointD bestProjectedPt;
   double bestSegmentBearingDeg = 0.0;
   bool foundCandidate = false;
+  FeatureID bestFeatureId;
+  bool bestIsTunnel = false;
 
   m_featuresFetcher.ForEachFeature(searchRect, [&](FeatureType & ft)
   {
@@ -3096,6 +3115,8 @@ void Framework::SnapToNearestRoadInFreeRide(location::GpsInfo & info)
 
     if (!ftypes::IsWayChecker::Instance()(ft))
       return;
+
+    bool const isOneWay = ftypes::IsOneWayChecker::Instance()(ft);
 
     ft.ParseGeometry(FeatureType::BEST_GEOMETRY);
     uint32_t const ptsCount = ft.GetPointsCount();
@@ -3117,7 +3138,10 @@ void Framework::SnapToNearestRoadInFreeRide(location::GpsInfo & info)
       m2::PointD const projectedPt = p1 + ab * t;
 
       double const distM = mercator::DistanceOnEarth(userPos, projectedPt);
-      if (distM > 14.0 || distM >= bestDistM)
+
+      // Sticky Bonus (Hysteresis)
+      double const effectiveDistM = (ft.GetID() == m_lockedRoadFeatureId) ? (distM * 0.5) : distM;
+      if (effectiveDistM > 14.0 || effectiveDistM >= bestEffectiveDistM)
         continue;
 
       double matchedBearingDeg = 0.0;
@@ -3129,16 +3153,30 @@ void Framework::SnapToNearestRoadInFreeRide(location::GpsInfo & info)
         double const diff1 = std::abs(ang::GetShortestDistance(math::DegToRad(info.m_bearing), math::DegToRad(segBearingDeg)));
         double const diff2 = std::abs(ang::GetShortestDistance(math::DegToRad(info.m_bearing), math::DegToRad(oppBearingDeg)));
 
-        double const minDiffDeg = math::RadToDeg(std::min(diff1, diff2));
-        if (minDiffDeg > 35.0)
-          continue;
+        if (isOneWay)
+        {
+          // Strictly forbid reverse direction p2 -> p1 on one-way streets
+          if (math::RadToDeg(diff1) > 35.0)
+            continue;
 
-        matchedBearingDeg = (diff1 <= diff2) ? segBearingDeg : oppBearingDeg;
+          matchedBearingDeg = segBearingDeg;
+        }
+        else
+        {
+          // Two-way street: check both p1 -> p2 and p2 -> p1
+          double const minDiffDeg = math::RadToDeg(std::min(diff1, diff2));
+          if (minDiffDeg > 35.0)
+            continue;
+
+          matchedBearingDeg = (diff1 <= diff2) ? segBearingDeg : oppBearingDeg;
+        }
       }
 
-      bestDistM = distM;
+      bestEffectiveDistM = effectiveDistM;
       bestProjectedPt = projectedPt;
       bestSegmentBearingDeg = matchedBearingDeg;
+      bestFeatureId = ft.GetID();
+      bestIsTunnel = ftypes::IsTunnelChecker::Instance()(ft);
       foundCandidate = true;
     }
   }, scales::GetUpperScale());
@@ -3150,6 +3188,18 @@ void Framework::SnapToNearestRoadInFreeRide(location::GpsInfo & info)
     info.m_longitude = snappedLL.m_lon;
     if (info.HasBearing())
       info.m_bearing = bestSegmentBearingDeg;
+
+    m_isOnTunnelRoad = bestIsTunnel;
+    m_lockedRoadFeatureId = bestFeatureId;
+    m_lastSnappedMercator = bestProjectedPt;
+    m_lastSnappedBearingDeg = bestSegmentBearingDeg;
+    m_hasSnappedState = true;
+  }
+  else
+  {
+    m_isOnTunnelRoad = false;
+    m_hasSnappedState = false;
+    m_lockedRoadFeatureId = FeatureID();
   }
 }
 
