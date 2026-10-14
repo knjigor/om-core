@@ -87,15 +87,7 @@ public class StorageUtils
   @NonNull
   public static String getApkPath(@NonNull Context context)
   {
-    try
-    {
-      return Utils.getApplicationInfo(context.getPackageManager(), Config.getApplicationId(), 0).sourceDir;
-    }
-    catch (final PackageManager.NameNotFoundException e)
-    {
-      Logger.e(TAG, "Can't get apk path from PackageManager", e);
-      return "";
-    }
+    return context.getApplicationInfo().sourceDir;
   }
 
   @NonNull
