@@ -40,6 +40,7 @@
 #include "indexer/feature_source.hpp"
 #include "indexer/feature_utils.hpp"
 #include "indexer/feature_visibility.hpp"
+#include "indexer/ftypes_matcher.hpp"
 #include "indexer/map_style_reader.hpp"
 #include "indexer/scales.hpp"
 #include "indexer/transliteration_loader.hpp"
@@ -97,6 +98,7 @@ uint32_t constexpr kDefaultBgTilesAreaOpacityPct = 50;  // half-transparent area
 std::string_view constexpr kAllow3dKey = "Allow3d";
 std::string_view constexpr kAllow3dBuildingsKey = "Buildings3d";
 std::string_view constexpr kAllowAutoZoom = "AutoZoom";
+std::string_view constexpr kSnapToRoadFreeRideKey = "SnapToRoadFreeRide";
 std::string_view constexpr kTrafficEnabledKey = "TrafficEnabled";
 std::string_view constexpr kTransitSchemeEnabledKey = "TransitSchemeEnabled";
 std::string_view constexpr kIsolinesEnabledKey = "IsolinesEnabled";
@@ -227,8 +229,10 @@ void Framework::OnLocationUpdate(GpsInfo const & info)
   }
 
 #else
-  GpsInfo const & rInfo = info;
+  GpsInfo rInfo = info;
 #endif
+
+  SnapToNearestRoadInFreeRide(rInfo);
 
   m_routingManager.OnLocationUpdate(rInfo);
 }
@@ -434,6 +438,8 @@ Framework::Framework(FrameworkParams const & params, bool loadMaps)
     m_showDownloadedRegions = true;
     UNUSED_VALUE(settings::Get(kShowDownloadedRegions, m_showDownloadedRegions));
   }
+
+  UNUSED_VALUE(settings::Get(kSnapToRoadFreeRideKey, m_snapToRoadFreeRide));
 }
 
 Framework::~Framework()
@@ -3051,6 +3057,100 @@ void Framework::AllowAutoZoom(bool allowAutoZoom)
 void Framework::SaveAutoZoom(bool allowAutoZoom)
 {
   settings::Set(kAllowAutoZoom, allowAutoZoom);
+}
+
+bool Framework::IsSnapToRoadFreeRideEnabled() const
+{
+  return m_snapToRoadFreeRide;
+}
+
+void Framework::SetSnapToRoadFreeRideEnabled(bool enabled)
+{
+  m_snapToRoadFreeRide = enabled;
+  settings::Set(kSnapToRoadFreeRideKey, enabled);
+}
+
+void Framework::SnapToNearestRoadInFreeRide(location::GpsInfo & info)
+{
+  if (!m_snapToRoadFreeRide)
+    return;
+
+  if (m_routingManager.IsRoutingActive())
+    return;
+
+  if (!info.HasSpeed() || info.m_speed < 2.5)
+    return;
+
+  m2::PointD const userPos = mercator::FromLatLon(info.m_latitude, info.m_longitude);
+  m2::RectD const searchRect = mercator::RectByCenterXYAndSizeInMeters(userPos, 15.0);
+
+  double bestDistM = 14.01;
+  m2::PointD bestProjectedPt;
+  double bestSegmentBearingDeg = 0.0;
+  bool foundCandidate = false;
+
+  m_featuresFetcher.ForEachFeature(searchRect, [&](FeatureType & ft)
+  {
+    if (ft.GetGeomType() != feature::GeomType::Line)
+      return;
+
+    if (!ftypes::IsWayChecker::Instance()(ft))
+      return;
+
+    ft.ParseGeometry(FeatureType::BEST_GEOMETRY);
+    uint32_t const ptsCount = ft.GetPointsCount();
+    if (ptsCount < 2)
+      return;
+
+    for (uint32_t i = 0; i + 1 < ptsCount; ++i)
+    {
+      m2::PointD const p1 = ft.GetPoint(i);
+      m2::PointD const p2 = ft.GetPoint(i + 1);
+
+      m2::PointD const ab = p2 - p1;
+      double const sqrLen = ab.SquaredLength();
+      if (sqrLen < 1e-12)
+        continue;
+
+      m2::PointD const ap = userPos - p1;
+      double const t = math::Clamp((ap.x * ab.x + ap.y * ab.y) / sqrLen, 0.0, 1.0);
+      m2::PointD const projectedPt = p1 + ab * t;
+
+      double const distM = mercator::DistanceOnEarth(userPos, projectedPt);
+      if (distM > 14.0 || distM >= bestDistM)
+        continue;
+
+      double matchedBearingDeg = 0.0;
+      if (info.HasBearing())
+      {
+        double const segBearingDeg = math::RadToDeg(ang::Azimuth(p1, p2, 0.0));
+        double const oppBearingDeg = fmod(segBearingDeg + 180.0, 360.0);
+
+        double const diff1 = std::abs(ang::GetShortestDistance(math::DegToRad(info.m_bearing), math::DegToRad(segBearingDeg)));
+        double const diff2 = std::abs(ang::GetShortestDistance(math::DegToRad(info.m_bearing), math::DegToRad(oppBearingDeg)));
+
+        double const minDiffDeg = math::RadToDeg(std::min(diff1, diff2));
+        if (minDiffDeg > 35.0)
+          continue;
+
+        matchedBearingDeg = (diff1 <= diff2) ? segBearingDeg : oppBearingDeg;
+      }
+
+      bestDistM = distM;
+      bestProjectedPt = projectedPt;
+      bestSegmentBearingDeg = matchedBearingDeg;
+      foundCandidate = true;
+    }
+  }, scales::GetUpperScale());
+
+  if (foundCandidate)
+  {
+    ms::LatLon const snappedLL = mercator::ToLatLon(bestProjectedPt);
+    info.m_latitude = snappedLL.m_lat;
+    info.m_longitude = snappedLL.m_lon;
+    if (info.HasBearing())
+      info.m_bearing = bestSegmentBearingDeg;
+  }
 }
 
 settings::Placement Framework::GetBookmarksTextPlacement()

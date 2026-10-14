@@ -399,6 +399,14 @@ void MyPositionController::NextMode(ScreenBase const & screen)
 
 void MyPositionController::OnLocationUpdate(location::GpsInfo const & info, bool isNavigable, ScreenBase const & screen)
 {
+  if (m_lastLocationTimestamp > 0.0)
+  {
+    double const dt = info.m_timestamp - m_lastLocationTimestamp;
+    if (dt >= 0.1 && dt <= 3.0)
+      m_gpsUpdateIntervalSec = dt;
+  }
+  m_currentSpeedMps = info.HasSpeed() ? info.m_speed : 0.0;
+
   m2::PointD const oldPos = GetDrawablePosition();
   double const oldAzimut = GetDrawableAzimut();
 
@@ -796,7 +804,10 @@ double MyPositionController::GetDrawableAzimut()
 
 void MyPositionController::CreateAnim(m2::PointD const & oldPos, double oldAzimut, ScreenBase const & screen)
 {
-  double const moveDuration = PositionInterpolator::GetMoveDuration(oldPos, m_position, screen);
+  double moveDuration = PositionInterpolator::GetMoveDuration(oldPos, m_position, screen);
+  if (m_currentSpeedMps > kMinSpeedThresholdMps && IsModeChangeViewport())
+    moveDuration = std::clamp(m_gpsUpdateIntervalSec * 1.02, 0.2, 1.5);
+
   double const rotateDuration = AngleInterpolator::GetRotateDuration(oldAzimut, m_drawDirection);
   if (df::IsAnimationAllowed(std::max(moveDuration, rotateDuration), screen))
   {
@@ -804,6 +815,11 @@ void MyPositionController::CreateAnim(m2::PointD const & oldPos, double oldAzimu
     {
       m_animCreator = [this, moveDuration](ref_ptr<Animation> syncAnim) -> drape_ptr<Animation>
       {
+        if (syncAnim != nullptr)
+        {
+          syncAnim->SetMaxDuration(moveDuration);
+          syncAnim->SetMinDuration(moveDuration);
+        }
         drape_ptr<Animation> anim = make_unique_dp<ArrowAnimation>(
             GetDrawablePosition(), m_position, syncAnim == nullptr ? moveDuration : syncAnim->GetDuration(),
             GetDrawableAzimut(), m_drawDirection);

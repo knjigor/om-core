@@ -1671,6 +1671,16 @@ JNIEXPORT jboolean Java_app_organicmaps_sdk_Framework_nativeGetAutoZoomEnabled(J
   return frm()->LoadAutoZoom();
 }
 
+JNIEXPORT void Java_app_organicmaps_sdk_Framework_nativeSetSnapToRoadFreeRideEnabled(JNIEnv *, jclass, jboolean enabled)
+{
+  frm()->SetSnapToRoadFreeRideEnabled(static_cast<bool>(enabled));
+}
+
+JNIEXPORT jboolean Java_app_organicmaps_sdk_Framework_nativeIsSnapToRoadFreeRideEnabled(JNIEnv *, jclass)
+{
+  return static_cast<jboolean>(frm()->IsSnapToRoadFreeRideEnabled());
+}
+
 // static void nativeZoomToPoint(double lat, double lon, int zoom, boolean animate);
 JNIEXPORT void Java_app_organicmaps_sdk_Framework_nativeZoomToPoint(JNIEnv * env, jclass, jdouble lat, jdouble lon,
                                                                     jint zoom, jboolean animate)

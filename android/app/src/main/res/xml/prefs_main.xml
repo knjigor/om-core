@@ -153,6 +153,11 @@
       android:title="@string/pref_map_auto_zoom"
       app:singleLineTitle="false"
       android:order="3" />
+    <SwitchPreferenceCompat
+      android:key="@string/pref_snap_to_road_free_ride"
+      android:title="@string/pref_snap_to_road_free_ride_title"
+      app:singleLineTitle="false"
+      android:order="4" />
     <Preference
       android:key="@string/pref_tts_screen"
       android:title="@string/pref_tts_enable_title"

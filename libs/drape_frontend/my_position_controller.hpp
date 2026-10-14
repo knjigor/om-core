@@ -192,6 +192,8 @@ private:
   base::Timer m_blockAutoZoomTimer;
   base::Timer m_updateLocationTimer;
   double m_lastLocationTimestamp;
+  double m_gpsUpdateIntervalSec = 1.0;
+  double m_currentSpeedMps = 0.0;
 
   m2::RectD m_pixelRect;
   m2::RectD m_visiblePixelRect;

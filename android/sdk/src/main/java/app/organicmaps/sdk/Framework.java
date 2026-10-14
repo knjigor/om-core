@@ -352,6 +352,9 @@ public class Framework
   public static native boolean nativeGetAutoZoomEnabled();
   public static native void nativeSetAutoZoomEnabled(boolean enabled);
 
+  public static native boolean nativeIsSnapToRoadFreeRideEnabled();
+  public static native void nativeSetSnapToRoadFreeRideEnabled(boolean enabled);
+
   public static native void nativeSetTransitSchemeEnabled(boolean enabled);
   public static native void nativeSaveSettingSchemeEnabled(boolean enabled);
   public static native boolean nativeIsTransitSchemeEnabled();

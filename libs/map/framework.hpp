@@ -759,6 +759,9 @@ public:
   void AllowAutoZoom(bool allowAutoZoom);
   void SaveAutoZoom(bool allowAutoZoom);
 
+  bool IsSnapToRoadFreeRideEnabled() const;
+  void SetSnapToRoadFreeRideEnabled(bool enabled);
+
   static settings::Placement GetBookmarksTextPlacement();
   void SetBookmarksTextPlacement(settings::Placement setting);
 
@@ -821,9 +824,12 @@ public:
                   std::string const & note);
 
 private:
+  void SnapToNearestRoadInFreeRide(location::GpsInfo & info);
+
   settings::UsageStats m_usageStats;
 
   bool m_showDownloadedRegions = false;
+  bool m_snapToRoadFreeRide = false;
 
 public:
   power_management::PowerManager & GetPowerManager() { return m_powerManager; }

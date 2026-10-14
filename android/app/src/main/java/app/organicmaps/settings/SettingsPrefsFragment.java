@@ -61,6 +61,7 @@ public class SettingsPrefsFragment extends BaseXmlSettingsFragment implements La
     init3dModePrefsCallbacks();
     initPerspectivePrefsCallbacks();
     initAutoZoomPrefsCallbacks();
+    initSnapToRoadFreeRidePrefsCallbacks();
     initLoggingEnabledPrefsCallbacks();
     initEmulationBadStorage();
     initUseMobileDataPrefsCallbacks();
@@ -252,6 +253,20 @@ public class SettingsPrefsFragment extends BaseXmlSettingsFragment implements La
     pref.setChecked(autozoomEnabled);
     pref.setOnPreferenceChangeListener((preference, newValue) -> {
       Framework.nativeSetAutoZoomEnabled((boolean) newValue);
+      return true;
+    });
+  }
+
+  private void initSnapToRoadFreeRidePrefsCallbacks()
+  {
+    final TwoStatePreference pref = getPreference(getString(R.string.pref_snap_to_road_free_ride));
+    if (pref == null)
+      return;
+
+    boolean enabled = Framework.nativeIsSnapToRoadFreeRideEnabled();
+    pref.setChecked(enabled);
+    pref.setOnPreferenceChangeListener((preference, newValue) -> {
+      Framework.nativeSetSnapToRoadFreeRideEnabled((boolean) newValue);
       return true;
     });
   }
